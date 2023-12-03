@@ -140,3 +140,123 @@ class KSUGolfCartsApp:
                 messagebox.showerror("Error", "Invalid ID or Password")
                 logging.warning(f"Failed login attempt with ID: {user_id}")
     # Abdulrahman Aldaeaj 443102297[ENDS]
+
+# Abdullah Almaghem 443102199 Starts
+    def switch_to_login(self):
+        self.root.destroy()
+        self.show_login_window()
+
+    def show_login_window(self):
+        self.root = tk.Tk()
+        self.root.title("Login")
+        self.root.geometry("300x250")  # Adjusted window size for better layout
+
+        # Styling
+        label_font = ('Arial', 12)
+        entry_font = ('Arial', 10)
+
+        # ID Field
+        id_frame = tk.Frame(self.root)
+        id_frame.pack(padx=20, pady=(20, 10))
+        tk.Label(id_frame, text="ID:", font=label_font).pack(side=tk.LEFT)
+        self.login_entries = {'ID': tk.Entry(id_frame, font=entry_font)}
+        self.login_entries['ID'].pack(side=tk.RIGHT, fill=tk.X, expand=True)
+
+        # Password Field
+        password_frame = tk.Frame(self.root)
+        password_frame.pack(padx=20, pady=10)
+        tk.Label(password_frame, text="Password:", font=label_font).pack(side=tk.LEFT)
+        self.login_entries['Password'] = tk.Entry(password_frame, show="*", font=entry_font)
+        self.login_entries['Password'].pack(side=tk.RIGHT, fill=tk.X, expand=True)
+
+        # Login Button
+        tk.Button(self.root, text='Login', command=self.validate_login, font=label_font).pack(pady=(20, 10))
+
+        self.root.mainloop()
+
+
+
+    def show_admin_window(self):
+        self.root = tk.Tk()
+        self.root.title("Admin Dashboard")
+        self.root.geometry("400x300")  # Set window size
+
+        # Golf Cart Plate Number
+        plate_frame = tk.Frame(self.root)
+        plate_frame.pack(padx=10, pady=10)
+        tk.Label(plate_frame, text="Golf Cart Plate Number:").pack(side=tk.LEFT)
+        self.plate_number_entry = tk.Entry(plate_frame)
+        self.plate_number_entry.pack(side=tk.RIGHT)
+
+        # College
+        college_frame = tk.Frame(self.root)
+        college_frame.pack(padx=10, pady=10)
+        tk.Label(college_frame, text="College:").pack(side=tk.LEFT)
+        self.college_entry = tk.Entry(college_frame)
+        self.college_entry.pack(side=tk.RIGHT)
+
+        # Create Button
+        tk.Button(self.root, text='Create Cart', command=self.create_cart).pack(pady=10)
+
+        # Backup Button
+        tk.Button(self.root, text='Backup Database', command=self.backup_database).pack(pady=10)
+
+        # Logout Button
+        tk.Button(self.root, text='Logout', command=self.logout).pack(pady=10)
+
+        self.root.mainloop()
+
+    def create_cart(self):
+        plate_number = self.plate_number_entry.get()
+        college = self.college_entry.get()
+
+        if plate_number and college:
+            try:
+                with self.conn:
+                    self.conn.execute('INSERT INTO GolfCarts (cart_ID,plate_number, college) VALUES (?, ?, ?)',
+                                      (plate_number ,plate_number, college))
+                messagebox.showinfo("Success", "New cart added successfully")
+                logging.info(f"New cart added: Plate {plate_number}, College {college}")
+            except sqlite3.IntegrityError:
+                messagebox.showerror("Error", "This cart ID already exists")
+                logging.warning(f"Cart creation failed: Plate {plate_number} already exists")
+
+    # Abdulrahman Aldaeaj 443102297
+
+    def backup_database(self):
+        with self.conn:
+            cursor = self.conn.cursor()
+            cursor.execute('SELECT * FROM Users')
+            users_data = cursor.fetchall()
+        headers = ['User ID', 'First Name', 'Last Name', 'User Class', 'Email', 'Phone', 'Password Hash']
+        with open('backup_users.csv', 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
+            writer.writerows(users_data)
+        messagebox.showinfo("Backup Successful", "Database has been backed up to 'backup_users.csv'")
+        logging.info("Database backed up to 'backup_users.csv'")
+
+    def show_user_window(self, user_id):
+        self.user_window = tk.Tk()
+        self.user_window.title("User Dashboard")
+        self.user_window.geometry("500x400")  # Set window size
+
+        tab_control = ttk.Notebook(self.user_window)
+
+        # Tab for Reserving a Cart
+        reserve_tab = ttk.Frame(tab_control)
+        tab_control.add(reserve_tab, text="Reserve a Cart")
+        self.setup_reserve_tab(reserve_tab, user_id)
+
+        # Tab for Viewing Reservations
+        view_tab = ttk.Frame(tab_control)
+        tab_control.add(view_tab, text="View My Reservations")
+        self.setup_view_tab(view_tab, user_id)
+
+        tab_control.pack(expand=1, fill="both")
+
+        # Logout Button
+        tk.Button(self.user_window, text='Logout', command=self.logoutuser).pack(pady=10)
+
+        self.user_window.mainloop()
+#Abdullah Almaghem 443102199 Ends
