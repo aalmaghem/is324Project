@@ -260,3 +260,146 @@ class KSUGolfCartsApp:
 
         self.user_window.mainloop()
 #Abdullah Almaghem 443102199 Ends
+def setup_reserve_tab(self, tab, user_id):
+        # College Selection
+        colleges = ["CCIS", "BUSINESS", "ENGINEERING"]
+        tk.Label(tab, text="Select College:").pack(padx=10, pady=5)
+        self.college_combobox = ttk.Combobox(tab, values=colleges)
+        self.college_combobox.pack(padx=10, pady=5)
+        # Populate the combobox with college names from the database
+
+        # Reservation Start and End Time
+        tk.Label(tab, text="Start Time & Date (yyyy-mm-dd hh:mm) :").pack(padx=10, pady=5)
+        self.start_time_entry = tk.Entry(tab)
+        self.start_time_entry.pack(padx=10, pady=5)
+
+        tk.Label(tab, text="End Time & Date (yyyy-mm-dd hh:mm):").pack(padx=10, pady=5)
+        self.end_time_entry = tk.Entry(tab)
+        self.end_time_entry.pack(padx=10, pady=5)
+
+        # Reserve Button
+        tk.Button(tab, text="Reserve", command=lambda: self.reserve_cart(user_id)).pack(padx=10, pady=10)
+
+    def reserve_cart(self, user_id):
+        college = self.college_combobox.get()
+        start_time = self.start_time_entry.get()
+        end_time = self.end_time_entry.get()
+
+        if not all([college, start_time, end_time]):
+            messagebox.showerror("Error", "All fields must be filled")
+            return
+        if not re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", start_time):
+            messagebox.showerror("Error", "Invalid date format")
+            return
+        if not re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$", end_time):
+            messagebox.showerror("Error", "Invalid date format")
+            return
+
+        # Check reservation time limit based on user class
+        if not self.validate_reservation_time(user_id, start_time, end_time):
+            return
+
+        # Reservation logic
+        try:
+            with self.conn:
+                # Check for available carts
+                cursor = self.conn.cursor()
+                cursor.execute('''SELECT cart_id FROM GolfCarts 
+                                  WHERE college = ? AND cart_id NOT IN (
+                                      SELECT cart_id FROM Reservations 
+                                      WHERE start_time < ? AND end_time > ?)''',
+                               (college, end_time, start_time))
+                available_carts = cursor.fetchall()
+
+                if available_carts:
+                    # Reserve the first available cart
+                    cursor.execute('''INSERT INTO Reservations 
+                                      (user_id, cart_id, start_time, end_time) 
+                                      VALUES (?, ?, ?, ?)''',
+                                   (user_id, available_carts[0][0], start_time, end_time))
+                    messagebox.showinfo("Success", "Cart reserved successfully")
+                else:
+                    messagebox.showerror("Error", "No carts available for the selected time")
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", str(e))
+
+    def validate_reservation_time(self, user_id, start_time, end_time):
+        with self.conn:
+            cursor = self.conn.cursor()
+            cursor.execute('SELECT user_class FROM Users WHERE user_id = ?', (user_id,))
+            result = cursor.fetchone()
+
+            if result:
+                user_class = result[0]
+                max_duration = self.get_max_reservation_duration(user_class)
+                if self.calculate_time_difference(start_time, end_time) > max_duration:
+                    messagebox.showerror("Error", f"Reservation exceeds maximum duration for {user_class}")
+                    return False
+                return True
+            else:
+                messagebox.showerror("Error", "User not found")
+                return False
+
+    # Abdulrahman Aldaeaj 443102297
+    def get_max_reservation_duration(self, user_class):
+        if user_class == 'Student':
+            return 30  # 30 minutes
+        elif user_class == 'Employee':
+            return 60  # 1 hour
+        else:  # Faculty
+            return 90  # 1 hour and 30 minutes
+
+    def calculate_time_difference(self, start, end):
+        from datetime import datetime
+
+        fmt = '%Y-%m-%d %H:%M'
+        start_dt = datetime.strptime(start, fmt)
+        end_dt = datetime.strptime(end, fmt)
+        delta = end_dt - start_dt
+        return delta.total_seconds() / 60
+    def load_reservations(self, user_id):
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                cursor.execute('''SELECT reservation_id, cart_id, start_time, end_time 
+                                  FROM Reservations WHERE user_id = ?''', (user_id,))
+                reservations = cursor.fetchall()
+
+                # Clear the listbox before adding new items
+                self.reservation_listbox.delete(0, tk.END)
+
+                for res in reservations:
+                    self.reservation_listbox.insert(tk.END,
+                                                    f"Reservation {res[0]}: Cart {res[1]}, From {res[2]} To {res[3]}")
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", str(e))
+
+    def setup_view_tab(self, tab, user_id):
+        # Label for Reservation List
+        tk.Label(tab, text="My Reservations:").pack(padx=10, pady=5)
+
+        # Listbox for showing reservations
+        self.reservation_listbox = tk.Listbox(tab)
+        self.reservation_listbox.pack(padx=10, pady=5, fill='both', expand=True)
+
+        # Button to Refresh/Load Reservations
+        tk.Button(tab, text="Refresh", command=lambda: self.load_reservations(user_id)).pack(padx=10, pady=10)
+
+    def logout(self):
+        # Destroy the current window
+        self.root.destroy()
+
+        # Reopen the login window
+        self.show_signup_window()
+
+    def logoutuser(self):
+        # Destroy the current window
+        self.user_window.destroy()
+
+        # Reopen the login window
+        self.show_signup_window()
+#Abdulrahman Aldaeaj 443102297
+
+# Main execution
+if __name__ == "__main__":
+    app = KSUGolfCartsApp()
