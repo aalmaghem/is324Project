@@ -260,7 +260,7 @@ class KSUGolfCartsApp:
 
         self.user_window.mainloop()
 #Abdullah Almaghem 443102199 Ends
-def setup_reserve_tab(self, tab, user_id):
+    def setup_reserve_tab(self, tab, user_id):
         # College Selection
         colleges = ["CCIS", "BUSINESS", "ENGINEERING"]
         tk.Label(tab, text="Select College:").pack(padx=10, pady=5)
